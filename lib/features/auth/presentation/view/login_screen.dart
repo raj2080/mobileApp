@@ -1,10 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/login_provider.dart';
-import '../../../home/presentation/view/home_screen.dart'; // Make sure to create this file next
+import 'package:blushstore_project/app/navigator/app_router.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:blushstore_project/app/constants/app_constants.dart';
 
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
+
+  Future<void> _updateLoginTime() async {
+    try {
+      final userBox = Hive.box(AppConstants.userBox);
+      await userBox.put('lastLoginTime', AppConstants.currentTimestamp);
+      await userBox.put('currentUser', AppConstants.currentUser);
+    } catch (e) {
+      debugPrint('Error updating login time: $e');
+    }
+  }
+
+  void _showMessage(BuildContext context, String message, bool isError) {
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -60,10 +84,6 @@ class LoginScreen extends ConsumerWidget {
                         width: 2,
                       ),
                     ),
-                    errorText: loginState.errorMessage.isNotEmpty &&
-                        loginState.email.isNotEmpty
-                        ? loginState.errorMessage
-                        : null,
                   ),
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
@@ -116,11 +136,10 @@ class LoginScreen extends ConsumerWidget {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Forgot password feature coming soon!'),
-                          backgroundColor: Colors.orange,
-                        ),
+                      _showMessage(
+                        context,
+                        'Forgot password feature coming soon!',
+                        false,
                       );
                     },
                     child: const Text('Forgot Password?'),
@@ -132,33 +151,19 @@ class LoginScreen extends ConsumerWidget {
                   onPressed: loginState.isValid && !loginState.isLoading
                       ? () async {
                     final success = await ref.read(loginProvider.notifier).login();
-                    if (success && context.mounted) {
-                      // Clear any existing snackbars
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      // Show success message
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Login successful!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                      // Navigate to home screen
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (_) => const HomeScreen(),
-                        ),
-                      );
+                    if (success) {
+                      await _updateLoginTime();
+                      if (context.mounted) {
+                        _showMessage(context, AppConstants.loginSuccess, false);
+                        AppRouter.replaceTo('/home');
+                      }
                     } else if (context.mounted) {
-                      // Clear any existing snackbars
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      // Show error message
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(loginState.errorMessage.isNotEmpty
-                              ? loginState.errorMessage
-                              : 'Login failed. Please try again.'),
-                          backgroundColor: Colors.red,
-                        ),
+                      _showMessage(
+                        context,
+                        loginState.errorMessage.isNotEmpty
+                            ? loginState.errorMessage
+                            : AppConstants.loginFailed,
+                        true,
                       );
                     }
                   }
@@ -175,8 +180,7 @@ class LoginScreen extends ConsumerWidget {
                     width: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor:
-                      AlwaysStoppedAnimation<Color>(Colors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
                       : const Text(
@@ -194,15 +198,14 @@ class LoginScreen extends ConsumerWidget {
                   children: [
                     const Text("Don't have an account?"),
                     TextButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Sign up feature coming soon!'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
-                      },
-                      child: const Text('Sign Up'),
+                      onPressed: () => AppRouter.navigateTo('/signup'),
+                      child: const Text(
+                        'Sign Up',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),

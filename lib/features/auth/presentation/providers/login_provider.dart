@@ -1,89 +1,102 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
-import '../../data/repositories/auth_repository.dart';
-
-part 'login_provider.freezed.dart';
-
-// Login State
-@freezed
-class LoginState with _$LoginState {
-  const factory LoginState({
-    @Default('') String email,
-    @Default('') String password,
-    @Default(false) bool isLoading,
-    @Default(false) bool isPasswordVisible,
-    @Default('') String errorMessage,
-    @Default(false) bool isValid,
-  }) = _LoginState;
-}
-
-// Auth Repository provider
-final authRepositoryProvider = Provider((ref) => AuthRepository());
-
-// Login Provider
-final loginProvider = StateNotifierProvider<LoginNotifier, LoginState>((ref) {
-  final authRepository = ref.watch(authRepositoryProvider);
-  return LoginNotifier(authRepository);
-});
+import 'package:http/http.dart' as http;
+import '../../domain/models/login_state.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:blushstore_project/app/constants/app_constants.dart';
 
 class LoginNotifier extends StateNotifier<LoginState> {
-  final AuthRepository _authRepository;
-
-  LoginNotifier(this._authRepository) : super(const LoginState());
+  LoginNotifier() : super(LoginState());
 
   void updateEmail(String email) {
     state = state.copyWith(
-      email: email,
+      email: email.toLowerCase().trim(),
       errorMessage: '',
-      isValid: _validateInputs(email, state.password),
     );
   }
 
   void updatePassword(String password) {
-    state = state.copyWith(
-      password: password,
-      errorMessage: '',
-      isValid: _validateInputs(state.email, password),
-    );
+    state = state.copyWith(password: password, errorMessage: '');
   }
 
   void togglePasswordVisibility() {
-    state = state.copyWith(
-      isPasswordVisible: !state.isPasswordVisible,
-    );
+    state = state.copyWith(isPasswordVisible: !state.isPasswordVisible);
   }
 
   Future<bool> login() async {
-    if (!state.isValid) return false;
+    if (!state.isValid) {
+      state = state.copyWith(
+        errorMessage: 'Please enter both email and password',
+      );
+      return false;
+    }
 
-    state = state.copyWith(
-      isLoading: true,
-      errorMessage: '',
-    );
+    state = state.copyWith(isLoading: true, errorMessage: '');
 
     try {
-      final result = await _authRepository.login(
-        state.email,
-        state.password,
+      final response = await http.post(
+        Uri.parse(AppConstants.loginUrl),
+        headers: AppConstants.headers,
+        body: json.encode({
+          'email': state.email,
+          'password': state.password,
+        }),
+      ).timeout(
+        Duration(milliseconds: AppConstants.apiTimeout),
+        onTimeout: () {
+          throw TimeoutException('Connection timed out');
+        },
       );
 
-      // TODO: Store token/user data in secure storage
+      final responseData = json.decode(response.body);
 
+      if (response.statusCode == 200) {
+        // Store user data in Hive after successful login
+        final userBox = Hive.box(AppConstants.userBox);
+        await userBox.put('lastLoginTime', AppConstants.currentTimestamp);
+        await userBox.put('currentUser', AppConstants.currentUser);
+
+        // Store the token if your backend sends one
+        if (responseData['token'] != null) {
+          await userBox.put('token', responseData['token']);
+        }
+
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: '',
+        );
+        return true;
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: responseData['message'] ?? 'Invalid email or password',
+        );
+        return false;
+      }
+    } on SocketException catch (e) {
       state = state.copyWith(
         isLoading: false,
+        errorMessage: AppConstants.connectionError,
       );
-      return true;
+      return false;
+    } on TimeoutException catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Request timed out. Please try again.',
+      );
+      return false;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: e.toString(),
+        errorMessage: AppConstants.serverError,
       );
       return false;
     }
   }
-
-  bool _validateInputs(String email, String password) {
-    final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    return emailRegExp.hasMatch(email) && password.length >= 6;
-  }
 }
+
+final loginProvider = StateNotifierProvider<LoginNotifier, LoginState>((ref) {
+  return LoginNotifier();
+});

@@ -2,11 +2,60 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final String currentUser = '2025raj';
+  final DateTime lastLoginTime = DateTime.parse('2025-03-04 06:42:37');
+
+  @override
+  void initState() {
+    super.initState();
+    // Show welcome toast after a short delay
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome back, $currentUser!',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  'Last login: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(lastLoginTime)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Theme.of(context).primaryColor,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -19,7 +68,6 @@ class HomeScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
-              // Show confirmation dialog
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
@@ -32,11 +80,8 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     TextButton(
                       onPressed: () {
-                        // Clear any existing snackbars
                         ScaffoldMessenger.of(context).clearSnackBars();
-                        // Pop the dialog
                         Navigator.pop(context);
-                        // Navigate back to login screen
                         Navigator.pushReplacementNamed(context, '/login');
                       },
                       child: const Text(
@@ -73,7 +118,7 @@ class HomeScreen extends ConsumerWidget {
                           CircleAvatar(
                             backgroundColor: Theme.of(context).primaryColor,
                             child: const Text(
-                              '2025', // First 4 characters of the user login
+                              '2025',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -84,15 +129,14 @@ class HomeScreen extends ConsumerWidget {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                '2025raj',
-                                style: TextStyle(
+                              Text(
+                                currentUser,
+                                style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              Text(
-                                'Last login: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now().toUtc())}',
+                              Text('Last login: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(lastLoginTime)}',
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 12,
@@ -109,7 +153,7 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               // Welcome Message
               Text(
-                'Welcome back, 2025raj!',
+                'Welcome back, $currentUser!',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
