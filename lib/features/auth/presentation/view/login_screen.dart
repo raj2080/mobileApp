@@ -62,9 +62,7 @@ class LoginScreen extends ConsumerWidget {
                 const SizedBox(height: 32),
                 // Email field
                 TextField(
-                  onChanged: (value) => ref
-                      .read(loginProvider.notifier)
-                      .updateEmail(value),
+                  onChanged: (value) => ref.read(loginProvider.notifier).updateEmail(value),
                   decoration: InputDecoration(
                     labelText: 'Email',
                     prefixIcon: const Icon(Icons.email_outlined),
@@ -84,6 +82,7 @@ class LoginScreen extends ConsumerWidget {
                         width: 2,
                       ),
                     ),
+                    errorText: loginState.emailError.isNotEmpty ? loginState.emailError : null,
                   ),
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
@@ -91,21 +90,15 @@ class LoginScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 // Password field
                 TextField(
-                  onChanged: (value) => ref
-                      .read(loginProvider.notifier)
-                      .updatePassword(value),
+                  onChanged: (value) => ref.read(loginProvider.notifier).updatePassword(value),
                   decoration: InputDecoration(
                     labelText: 'Password',
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        loginState.isPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                        loginState.isPasswordVisible ? Icons.visibility : Icons.visibility_off,
                       ),
-                      onPressed: () => ref
-                          .read(loginProvider.notifier)
-                          .togglePasswordVisibility(),
+                      onPressed: () => ref.read(loginProvider.notifier).togglePasswordVisibility(),
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -123,10 +116,7 @@ class LoginScreen extends ConsumerWidget {
                         width: 2,
                       ),
                     ),
-                    errorText: loginState.errorMessage.isNotEmpty &&
-                        loginState.password.isNotEmpty
-                        ? loginState.errorMessage
-                        : null,
+                    errorText: loginState.passwordError.isNotEmpty ? loginState.passwordError : null,
                   ),
                   obscureText: !loginState.isPasswordVisible,
                   textInputAction: TextInputAction.done,
@@ -148,9 +138,9 @@ class LoginScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 // Login button
                 ElevatedButton(
-                  onPressed: loginState.isValid && !loginState.isLoading
-                      ? () async {
-                    final success = await ref.read(loginProvider.notifier).login();
+                  onPressed: () async {
+                    final loginNotifier = ref.read(loginProvider.notifier);
+                    final success = await loginNotifier.login();
                     if (success) {
                       await _updateLoginTime();
                       if (context.mounted) {
@@ -166,8 +156,7 @@ class LoginScreen extends ConsumerWidget {
                         true,
                       );
                     }
-                  }
-                      : null,
+                  },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(

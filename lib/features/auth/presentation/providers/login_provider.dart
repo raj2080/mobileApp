@@ -13,23 +13,38 @@ class LoginNotifier extends StateNotifier<LoginState> {
   void updateEmail(String email) {
     state = state.copyWith(
       email: email.toLowerCase().trim(),
+      emailError: '',
       errorMessage: '',
     );
   }
 
   void updatePassword(String password) {
-    state = state.copyWith(password: password, errorMessage: '');
+    state = state.copyWith(
+      password: password,
+      passwordError: '',
+      errorMessage: '',
+    );
   }
 
   void togglePasswordVisibility() {
     state = state.copyWith(isPasswordVisible: !state.isPasswordVisible);
   }
 
+  bool validateInput() {
+    bool isValid = true;
+    if (state.email.isEmpty) {
+      state = state.copyWith(emailError: 'Please enter your email.');
+      isValid = false;
+    }
+    if (state.password.isEmpty) {
+      state = state.copyWith(passwordError: 'Please enter your password.');
+      isValid = false;
+    }
+    return isValid;
+  }
+
   Future<bool> login() async {
-    if (!state.isValid) {
-      state = state.copyWith(
-        errorMessage: 'Please enter both email and password',
-      );
+    if (!validateInput()) {
       return false;
     }
 
@@ -53,8 +68,8 @@ class LoginNotifier extends StateNotifier<LoginState> {
       final responseData = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        // Store user data in Hive after successful login
-        final userBox = Hive.box(AppConstants.userBox);
+        // Store necessary user data in Hive after successful login
+        final userBox = await Hive.openBox(AppConstants.userBox);
         await userBox.put('lastLoginTime', AppConstants.currentTimestamp);
         await userBox.put('currentUser', AppConstants.currentUser);
 
@@ -71,7 +86,7 @@ class LoginNotifier extends StateNotifier<LoginState> {
       } else {
         state = state.copyWith(
           isLoading: false,
-          errorMessage: responseData['message'] ?? 'Invalid email or password',
+          errorMessage: 'Invalid email or password.',
         );
         return false;
       }

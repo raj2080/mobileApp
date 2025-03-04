@@ -4,6 +4,8 @@ class LoginState {
   final bool isLoading;
   final bool isPasswordVisible;
   final String errorMessage;
+  final String emailError;
+  final String passwordError;
 
   LoginState({
     this.email = '',
@@ -11,10 +13,11 @@ class LoginState {
     this.isLoading = false,
     this.isPasswordVisible = false,
     this.errorMessage = '',
+    this.emailError = '',
+    this.passwordError = '',
   });
 
-  bool get isValid =>
-      email.isNotEmpty && password.isNotEmpty && password.length >= 6;
+  bool get isValid => email.isNotEmpty && password.isNotEmpty && password.length >= 6;
 
   LoginState copyWith({
     String? email,
@@ -22,6 +25,8 @@ class LoginState {
     bool? isLoading,
     bool? isPasswordVisible,
     String? errorMessage,
+    String? emailError,
+    String? passwordError,
   }) {
     return LoginState(
       email: email ?? this.email,
@@ -29,6 +34,8 @@ class LoginState {
       isLoading: isLoading ?? this.isLoading,
       isPasswordVisible: isPasswordVisible ?? this.isPasswordVisible,
       errorMessage: errorMessage ?? this.errorMessage,
+      emailError: emailError ?? this.emailError,
+      passwordError: passwordError ?? this.passwordError,
     );
   }
 }
