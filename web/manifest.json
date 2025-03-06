@@ -1,6 +1,6 @@
 {
-    "name": "blushstore_project",
-    "short_name": "blushstore_project",
+    "name": "blushstore",
+    "short_name": "blushstore",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
