@@ -1,4 +1,4 @@
-# blushstore_project
+# blushstore
 
 A new Flutter project.
 
